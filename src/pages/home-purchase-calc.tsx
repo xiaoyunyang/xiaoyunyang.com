@@ -38,7 +38,27 @@ const createNewCol = ({
   interestRate: number,
   maintenance: number
 }) => {
-
+  const downPaymentDollar = downPaymentPct * 0.01 * offer;
+  const moneyLeft = liquidAsset - downPaymentDollar;
+  const loanAmount = offer - downPaymentDollar;
+  const mir = (interestRate / 100) / 12; // monthly interest rate
+  const monthlyLoan = (loanAmount * mir * (1 + mir) ** (12 * (30))) / ((1 + mir) ** (12 * 30) - 1);
+  const monthly = maintenance + monthlyLoan;
+  return {
+    name,
+    liquidAsset,
+    asking,
+    offer,
+    downPaymentPct,
+    downPaymentDollar,
+    closing,
+    moneyLeft,
+    loanAmount,
+    interestRate,
+    monthlyLoan,
+    maintenance,
+    monthly
+  };
 };
 const rows = [
   createData("Frozen yoghurt", 159, 6.0, 24, 4.0),
@@ -48,12 +68,11 @@ const rows = [
   createData("Gingerbread", 356, 16.0, 49, 3.9)
 ];
 const AddNewColumn = () => {
-  const useStyles = makeStyles((theme) => ({
+  const classes = makeStyles((theme) => ({
     margin: {
       margin: theme.spacing(1)
     }
   }));
-  const classes = useStyles();
 
   return (
     <Fab size="small" color="secondary" aria-label="add" className={classes.margin}>
@@ -63,6 +82,17 @@ const AddNewColumn = () => {
 };
 const CalcTable = () => {
   const classes = useStyles();
+  // const newCol = createNewCol({
+  //   name: "88 Bleecker St 6B",
+  //   liquidAsset: 150000,
+  //   asking: 475000,
+  //   offer: 455000,
+  //   downPaymentPct: 25,
+  //   closing: 10000,
+  //   interestRate: 3.25,
+  //   maintenance: 1073
+  // });
+  // console.log(newCol);
 
   return (
     <TableContainer component={Paper}>
@@ -103,7 +133,7 @@ const Calc = () => (
 const BuyHomeCalcPage = (props: PageProps) => (
   <Layout>
     <SEO title="Page two" />
-    <h1>Real Estate Financial Calculator</h1>
+    <h1>Home Purchase Feasibility Calculator</h1>
     <Calc />
     <Link to="/">Go back to the homepage</Link>
   </Layout>

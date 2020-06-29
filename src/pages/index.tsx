@@ -19,7 +19,7 @@ const IndexPage = () => (
     <br />
     <Link to="/using-typescript/">Go to "Using TypeScript"</Link>
     <br />
-    <Link to="/real-estate-financial-calc/">Real Estate Financial Calculator</Link>
+    <Link to="/home-purchase-calc/">Home Purchase Feasibility Calculator</Link>
   </Layout>
 );
 
