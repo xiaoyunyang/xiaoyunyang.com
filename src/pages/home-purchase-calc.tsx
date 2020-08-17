@@ -467,6 +467,7 @@ const DialogInner = ({ propertyData, saveAndClose, displayAlert }: {
             />
           </Grid>
           <Grid item xs={12} sm={6}>
+
             <TextField
               id="dialog-form-interestRate"
               label="Interest Rate"
@@ -569,9 +570,13 @@ const BuyHomeCalcPage = (props: PageProps) => {
   }, [table]);
 
   const openDialog = (i?: number) => {
-    const propertyData = getColFromTable(table, i);
+    const globalOverwrite = (i === undefined) ? globalFinancial : {};
+    const propertyData = {
+      ...getColFromTable(table, i),
+      ...globalOverwrite
+    };
     const propertyIndex = i || table.name.length;
-    const title = i === undefined ? "Add Property" : "Edit Property";
+    const title = (i === undefined) ? "Add Property" : "Edit Property";
     setState({
       open: true,
       displayAlert: false,
@@ -585,6 +590,7 @@ const BuyHomeCalcPage = (props: PageProps) => {
   }, [state]);
   const saveAndCloseDialog = useCallback((updateData) => {
     const fieldValues = Object.values(updateData);
+    console.log("FIELD VALUES", fieldValues);
     if (fieldValues.includes(undefined) || fieldValues.includes("")) {
       setState({
         ...state,
@@ -627,33 +633,45 @@ const BuyHomeCalcPage = (props: PageProps) => {
           saveAndClose={saveAndCloseDialog}
         />
       </DialogContainer>
-      <h2>Global Financial Variables</h2>
-      <DollarInput
-        id="global-start-asset"
-        value={startAsset}
-        onChange={updateGlobalFinancial("startAsset")}
-        label="Start Asset"
-      />
-      <DollarInput
-        id="global-closing-cost"
-        value={closing}
-        onChange={updateGlobalFinancial("closing")}
-        label="Closing Cost"
-      />
-      <TextField
-        id="global-interest-rate"
-        label="Interest Rate"
-        value={interestRate}
-        onChange={updateGlobalFinancial("interestRate")}
-        InputProps={{
-          endAdornment: <InputAdornment position="end">%</InputAdornment>,
-          inputProps: {
-            style: { textAlign: "right" }
-          }
-        }}
-      />
-      <h2>Comparisons</h2>
-      <CalcTable table={table} openDialog={openDialog} setTableEntry={setTableEntry} />
+      <div style={{ paddingTop: 20 }}>
+        <h2>Global Financial Variables</h2>
+        <Grid container spacing={1}>
+          <Grid item xs={3}>
+            <DollarInput
+              id="global-start-asset"
+              value={startAsset}
+              onChange={updateGlobalFinancial("startAsset")}
+              label="Start Asset"
+            />
+          </Grid>
+          <Grid item xs={3}>
+            <DollarInput
+              id="global-closing-cost"
+              value={closing}
+              onChange={updateGlobalFinancial("closing")}
+              label="Closing Cost"
+            />
+          </Grid>
+          <Grid item xs={3}>
+            <TextField
+              id="global-interest-rate"
+              label="Interest Rate"
+              value={interestRate}
+              onChange={updateGlobalFinancial("interestRate")}
+              InputProps={{
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                inputProps: {
+                  style: { textAlign: "right" }
+                }
+              }}
+            />
+          </Grid>
+        </Grid>
+      </div>
+      <div style={{ paddingTop: 40, paddingBottom: 40 }}>
+        <h2>Comparisons</h2>
+        <CalcTable table={table} openDialog={openDialog} setTableEntry={setTableEntry} />
+      </div>
       <Link to="/">Go back to the homepage</Link>
     </Layout>
   );
