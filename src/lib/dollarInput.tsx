@@ -7,9 +7,12 @@ interface NumberFormatCustomProps {
   inputRef: (instance: NumberFormat | null) => void;
   onChange: (event: { target: { name: string; value: string } }) => void;
   name: string;
+  rightAlign: boolean;
 }
 const NumberFormatCustom = (props: NumberFormatCustomProps) => {
-  const { inputRef, onChange, ...other } = props;
+  const {
+    inputRef, onChange, rightAlign, ...other
+  } = props;
   return (
     <NumberFormat
       {...other}
@@ -25,20 +28,27 @@ const NumberFormatCustom = (props: NumberFormatCustomProps) => {
       thousandSeparator
       isNumericString
       prefix="$"
-      style={{ textAlign: "right" }}
+      style={rightAlign ? { textAlign: "right" } : {}}
     />
   );
 };
 const DollarInput = ({
-  value, id, className, onChange
-}) => (
+  value, id, className = "", onChange, rightAlign = false, label = undefined
+}: {
+  value: number; id: string; className: string;
+  onChange: () => void;
+  rightAlign: boolean;
+  label: string | undefined;
+}): JSX.Element => (
   <TextField
     id={id}
+    label={label}
     className={className}
     value={value}
     onChange={onChange}
     InputProps={{
-      inputComponent: NumberFormatCustom as any
+      inputComponent: NumberFormatCustom as any,
+      inputProps: { rightAlign }
     }}
   />
 );

@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, ChangeEvent, useCallback } from "react";
 import { PageProps, Link } from "gatsby";
 import NumberFormat from "react-number-format";
 
 // Material UI
-import { makeStyles } from "@material-ui/core/styles";
+import {
+  makeStyles, withStyles, Theme, createStyles
+} from "@material-ui/core/styles";
+import Grid from "@material-ui/core/Grid";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -13,23 +16,57 @@ import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 import Fab from "@material-ui/core/Fab";
 import AddIcon from "@material-ui/icons/Add";
+// import ArrowDropDownIcon from "@material-ui/icons/ArrowDropDown";
+import CreateIcon from "@material-ui/icons/Create";
+import IconButton from "@material-ui/core/IconButton";
+import { TextField, Button } from "@material-ui/core";
+
 import Input from "@material-ui/core/Input";
 import InputAdornment from "@material-ui/core/InputAdornment";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import Typography from "@material-ui/core/Typography";
 
 // Libs
 import { clone } from "ramda";
 import SEO from "../components/seo";
 import Layout from "../components/layout";
 import DollarInput from "../lib/dollarInput";
+import DialogContainer, { DialogActions, DialogContent } from "../lib/dialogContainer";
 
-const useStyles = makeStyles({
+const useStyles = makeStyles((theme: Theme) => ({
   table: {
-    minWidth: 650
+    minWidth: 650,
+    marginTop: theme.spacing(1)
   },
   tableInput: {
     width: 100
+  },
+  inlineIconButton: {
+    marginTop: -theme.spacing(1),
+    marginLeft: -theme.spacing(1) * 1.2
   }
-});
+}));
+
+interface PropertyData {
+  asking: number | undefined;
+  downPaymentPct: number | undefined;
+  interestRate: number | undefined;
+  maintenance: number | undefined;
+  name: string | undefined;
+  offer: number | undefined;
+  startAsset: number | undefined;
+  closing: number | undefined;
+}
+const InitPropertyData = {
+  asking: undefined,
+  downPaymentPct: undefined,
+  interestRate: undefined,
+  maintenance: undefined,
+  name: undefined,
+  offer: undefined,
+  startAsset: undefined,
+  closing: undefined
+};
 const rowLabels = [
   "startAsset",
   "asking",
@@ -106,7 +143,7 @@ const AddNewColumn = () => {
   }));
 
   return (
-    <Fab size="small" color="secondary" aria-label="add" className={classes.margin}>
+    <Fab size="small" color="secondary" aria-label="add new property" className={classes.margin}>
       <AddIcon />
     </Fab>
   );
@@ -190,15 +227,17 @@ const TableEntry = (
   switch (dataFormat) {
   case "adjustablePercent":
     return (
-      <Input
+      <TextField
         id={`${rowLabel}-${i}`}
         className={classes.tableInput}
-        inputProps={{
-          style: { textAlign: "right" }
+        InputProps={{
+          endAdornment: <InputAdornment position="end">%</InputAdornment>,
+          inputProps: {
+            style: { textAlign: "right" }
+          }
         }}
         value={value}
         onChange={setTableEntry(rowLabel, i)}
-        endAdornment={<InputAdornment position="end">%</InputAdornment>}
       />
     );
   case "adjustableDollar":
@@ -208,6 +247,7 @@ const TableEntry = (
         className={classes.tableInput}
         value={value}
         onChange={setTableEntry(rowLabel, i)}
+        rightAlign
       />
     );
   case "percent":
@@ -222,22 +262,30 @@ const TableEntry = (
     return <>{value}</>;
   }
 };
-const getColEntry = (table, i, entryUpdate) => {
+const getColFromTable = (table, i) => ({
+  name: table.name[i],
+  startAsset: table.startAsset[i],
+  asking: table.asking[i],
+  offer: table.offer[i],
+  downPaymentPct: table.downPaymentPct[i],
+  closing: table.closing[i],
+  interestRate: table.interestRate[i],
+  maintenance: table.maintenance[i]
+});
+const getUpdatedCol = (table, i, entryUpdate) => {
+  const colFromTable = getColFromTable(table, i);
   const newColArgs = {
-    name: table.name[i],
-    startAsset: table.startAsset[i],
-    asking: table.asking[i],
-    offer: table.offer[i],
-    downPaymentPct: table.downPaymentPct[i],
-    closing: table.closing[i],
-    interestRate: table.interestRate[i],
-    maintenance: table.maintenance[i],
+    ...colFromTable,
     ...entryUpdate
   };
   const newCol = createNewEntry(newColArgs);
   return newCol;
 };
-const CalcTable = () => {
+const CalcTable = ({
+  openDialog
+}: {
+  openDialog: (input: any) => () => void;
+}) => {
   const classes = useStyles();
 
   const [table, setTable] = useState(createTable());
@@ -250,7 +298,7 @@ const CalcTable = () => {
     const newTable = clone(table);
     newTable[rowLabel][i] = newValue;
     const entryUpdate = { [rowLabel]: newValue };
-    const newColEntry = getColEntry(table, i, entryUpdate);
+    const newColEntry = getUpdatedCol(table, i, entryUpdate);
     // replace column
     const keys = Object.keys(table);
     // eslint-disable-next-line no-restricted-syntax
@@ -260,16 +308,53 @@ const CalcTable = () => {
     newTable[rowLabel][i] = e.target.value;
     setTable(newTable);
   };
+  const updateData = () => {
+    console.log("UPDATE DATA");
+  };
+  const addData = () => {
+    console.log("ADD DATA");
+  };
   return (
     <div style={{ width: "90%" }}>
       <TableContainer component={Paper}>
-        <Table className={classes.table} size="small" aria-label="a dense table">
+        <Table className={classes.table} size="small" aria-label="home purchase feasibility calculator">
           <TableHead>
             <TableRow>
               {
-                table.name.map((label) => <TableCell key={label} align="right">{label}</TableCell>)
+                table.name.map((label, i) => (
+                  <TableCell key={label} align="right">
+                    <Grid container spacing={1}>
+                      <Grid item xs>
+                        {label}
+                      </Grid>
+                      {label.length > 0 && (
+                        <Grid item xs={1}>
+                          <IconButton
+                            aria-label="edit property information"
+                            className={classes.inlineIconButton}
+                            onClick={openDialog(
+                              { propertyData: getColFromTable(table, i), updateData }
+                            )}
+                          >
+                            <CreateIcon fontSize="small" />
+                          </IconButton>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </TableCell>
+                ))
               }
-              <TableCell align="right"><AddNewColumn /></TableCell>
+              <TableCell align="right">
+                <Fab
+                  onClick={openDialog({ updateData: addData })}
+                  size="small"
+                  className={classes.inlineIconButton}
+                  color="secondary"
+                  aria-label="add new property to table"
+                >
+                  <AddIcon />
+                </Fab>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -302,13 +387,181 @@ const CalcTable = () => {
   );
 };
 
-const BuyHomeCalcPage = (props: PageProps) => (
-  <Layout>
-    <SEO title="Page two" />
-    <h1>Home Purchase Feasibility Calculator</h1>
-    <CalcTable />
-    <Link to="/">Go back to the homepage</Link>
-  </Layout>
-);
+const useInputChange = (setValue: (val: string) => void, onChange?: (val: string) => void) => useCallback(({
+  target: {
+    value
+  }
+}: ChangeEvent<HTMLInputElement>) => {
+  setValue(value);
+  if (onChange) {
+    onChange(value);
+  }
+}, [setValue, onChange]);
+
+const useFormInput = (
+  setValue: (update: any) => void,
+  fieldName: string
+) => {
+  const onChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setValue({ [fieldName]: e.target.value });
+  }, [fieldName, setValue]);
+  return onChange;
+};
+
+const DialogInner = ({ propertyData, saveAndClose }: {
+  propertyData: PropertyData; saveAndClose: any;
+}) => {
+  console.log("DIALOG INNER...");
+  console.log("propertyData", propertyData);
+  // const [name, setName] = useState(propertyData.name);
+  // const [asking, setAsking] = useState(propertyData.asking);
+  // const [offer, setOffer] = useState(propertyData.offer);
+  // const [downPaymentPct, setDownPaymentPct] = useState(propertyData.downPaymentPct);
+  // const [interestRate, setInterestRate] = useState(propertyData.interestRate);
+  // const [startAsset, setStartAsset] = useState(propertyData.startAsset);
+  // const [closing, setClosing] = useState(propertyData.closing);
+
+  const [state, setState] = useState(propertyData);
+  // const setPropertyData = (field) => (value) => {
+  //   console.log("event", e);
+  //   console.log("set property data", e.target.value);
+  // };
+
+  const onSaveClick = useCallback(() => {
+    saveAndClose(state);
+  }, [saveAndClose, state]);
+  const setValue = (value) => {
+    setState({
+      ...state,
+      ...value
+    });
+  };
+  const {
+    name, asking, offer, downPaymentPct, interestRate, startAsset, closing
+  } = state;
+  console.log("STATE", state);
+  return (
+    <>
+      <DialogContent dividers>
+        <DialogContentText id="alert-dialog-description">
+          Fill out information for the property.
+        </DialogContentText>
+        <Grid container spacing={1}>
+          <Grid item lg={12} xs={12} sm={12}>
+            <TextField fullWidth label="name" defaultValue={name} onChange={useFormInput(setValue, "name")} />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <DollarInput
+              id="dialog-form-asking"
+              value={asking}
+              onChange={useFormInput(setValue, "asking")}
+              label="Asking Price"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <DollarInput
+              id="dialog-form-offer"
+              value={offer}
+              onChange={useFormInput(setValue, "offer")}
+              label="Offer"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              id="dialog-form-downPaymentPct"
+              label="Down Payment"
+              value={downPaymentPct}
+              onChange={useFormInput(setValue, "downPaymentPct")}
+              InputProps={{
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                inputProps: {
+                  style: { textAlign: "right" }
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              id="dialog-form-interestRate"
+              label="Interest Rate"
+              value={interestRate}
+              onChange={useFormInput(setValue, "interestRate")}
+              InputProps={{
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                inputProps: {
+                  style: { textAlign: "right" }
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <DollarInput
+              id="dialog-form-startAsset"
+              value={startAsset}
+              onChange={useFormInput(setValue, "startAsset")}
+              label="Start Asset"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <DollarInput
+              id="dialog-form-closing"
+              value={closing}
+              onChange={useFormInput(setValue, "closing")}
+              label="Closing"
+            />
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button autoFocus onClick={onSaveClick} color="primary">
+          Save changes
+        </Button>
+      </DialogActions>
+    </>
+  );
+};
+
+const InitialDialogState = {
+  open: false,
+  title: "",
+  propertyData: InitPropertyData
+  // saveAndClose: () => {}
+};
+
+const BuyHomeCalcPage = (props: PageProps) => {
+  const [state, setState] = React.useState(InitialDialogState);
+
+  const openDialog = ({ propertyData }: {
+    propertyData?: PropertyData;
+    updateData: (updatedPropertyData: PropertyData) => void
+  }) => () => {
+    const title = propertyData ? "Edit Property" : "Add Property";
+    setState({
+      open: true,
+      title,
+      propertyData: propertyData || InitPropertyData
+    });
+  };
+  const closeDialog = (updatedData) => {
+    console.log("CLOSE DIALOG", updatedData);
+    setState({ ...state, open: false });
+  };
+  return (
+    <Layout>
+      <SEO title="Home Purchase Feasibility Calculator" />
+      <h1>Home Purchase Feasibility Calculator</h1>
+      <DialogContainer
+        title={state.title}
+        open={state.open}
+        closeDialog={closeDialog}
+      >
+        <DialogInner propertyData={state.propertyData} saveAndClose={closeDialog} />
+      </DialogContainer>
+      <CalcTable openDialog={openDialog} />
+      <Link to="/">Go back to the homepage</Link>
+    </Layout>
+  );
+};
 
 export default BuyHomeCalcPage;
