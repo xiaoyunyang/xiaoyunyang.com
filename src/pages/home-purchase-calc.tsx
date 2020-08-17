@@ -29,7 +29,7 @@ import DialogContentText from "@material-ui/core/DialogContentText";
 import Typography from "@material-ui/core/Typography";
 
 // Libs
-import { clone } from "ramda";
+import { clone, mapObjIndexed } from "ramda";
 import SEO from "../components/seo";
 import Layout from "../components/layout";
 import DollarInput from "../lib/dollarInput";
@@ -391,7 +391,8 @@ const useFormInput = (
   fieldName: string
 ) => {
   const onChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setValue({ [fieldName]: e.target.value });
+    const updatedValue = (fieldName === "name") ? e.target.value : Number(e.target.value);
+    setValue({ [fieldName]: updatedValue });
   }, [fieldName, setValue]);
   return onChange;
 };
@@ -467,7 +468,6 @@ const DialogInner = ({ propertyData, saveAndClose, displayAlert }: {
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-
             <TextField
               id="dialog-form-interestRate"
               label="Interest Rate"
