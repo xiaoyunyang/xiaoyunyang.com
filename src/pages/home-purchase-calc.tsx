@@ -16,6 +16,8 @@ import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 import Fab from "@material-ui/core/Fab";
 import AddIcon from "@material-ui/icons/Add";
+import { Alert, AlertTitle } from "@material-ui/lab";
+
 // import ArrowDropDownIcon from "@material-ui/icons/ArrowDropDown";
 import CreateIcon from "@material-ui/icons/Create";
 import IconButton from "@material-ui/core/IconButton";
@@ -262,6 +264,8 @@ const TableEntry = (
     return <>{value}</>;
   }
 };
+
+// Utils
 const getColFromTable = (table, i) => ({
   name: table.name[i],
   startAsset: table.startAsset[i],
@@ -272,6 +276,7 @@ const getColFromTable = (table, i) => ({
   interestRate: table.interestRate[i],
   maintenance: table.maintenance[i]
 });
+
 const getUpdatedCol = (table, i, entryUpdate) => {
   const colFromTable = getColFromTable(table, i);
   const newColArgs = {
@@ -282,38 +287,23 @@ const getUpdatedCol = (table, i, entryUpdate) => {
   return newCol;
 };
 const CalcTable = ({
-  openDialog
+  table,
+  openDialog,
+  setTableEntry
 }: {
-  openDialog: (input: any) => () => void;
+  table: any
+  openDialog: any;
+  setTableEntry: any;
 }) => {
   const classes = useStyles();
+  const editClick = useCallback((i) => () => {
+    openDialog(i);
+  }, [openDialog]);
 
-  const [table, setTable] = useState(createTable());
+  const addNewClick = useCallback(() => {
+    openDialog();
+  }, [openDialog]);
 
-  const setTableEntry = (rowLabel: string, i: number) => (
-    e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
-  ) => {
-    const newValue = Number(e.target.value);
-    if (Number.isNaN(Number(newValue))) return;
-    const newTable = clone(table);
-    newTable[rowLabel][i] = newValue;
-    const entryUpdate = { [rowLabel]: newValue };
-    const newColEntry = getUpdatedCol(table, i, entryUpdate);
-    // replace column
-    const keys = Object.keys(table);
-    // eslint-disable-next-line no-restricted-syntax
-    for (const key of keys) {
-      newTable[key][i] = newColEntry[key];
-    }
-    newTable[rowLabel][i] = e.target.value;
-    setTable(newTable);
-  };
-  const updateData = () => {
-    console.log("UPDATE DATA");
-  };
-  const addData = () => {
-    console.log("ADD DATA");
-  };
   return (
     <div style={{ width: "90%" }}>
       <TableContainer component={Paper}>
@@ -321,7 +311,7 @@ const CalcTable = ({
           <TableHead>
             <TableRow>
               {
-                table.name.map((label, i) => (
+                table.name.map((label: string, i: number) => (
                   <TableCell key={label} align="right">
                     <Grid container spacing={1}>
                       <Grid item xs>
@@ -332,9 +322,7 @@ const CalcTable = ({
                           <IconButton
                             aria-label="edit property information"
                             className={classes.inlineIconButton}
-                            onClick={openDialog(
-                              { propertyData: getColFromTable(table, i), updateData }
-                            )}
+                            onClick={editClick(i)}
                           >
                             <CreateIcon fontSize="small" />
                           </IconButton>
@@ -346,7 +334,7 @@ const CalcTable = ({
               }
               <TableCell align="right">
                 <Fab
-                  onClick={openDialog({ updateData: addData })}
+                  onClick={addNewClick}
                   size="small"
                   className={classes.inlineIconButton}
                   color="secondary"
@@ -408,49 +396,46 @@ const useFormInput = (
   return onChange;
 };
 
-const DialogInner = ({ propertyData, saveAndClose }: {
-  propertyData: PropertyData; saveAndClose: any;
+const DialogInner = ({ propertyData, saveAndClose, displayAlert }: {
+  propertyData: PropertyData; saveAndClose: any; displayAlert: boolean;
 }) => {
-  console.log("DIALOG INNER...");
-  console.log("propertyData", propertyData);
-  // const [name, setName] = useState(propertyData.name);
-  // const [asking, setAsking] = useState(propertyData.asking);
-  // const [offer, setOffer] = useState(propertyData.offer);
-  // const [downPaymentPct, setDownPaymentPct] = useState(propertyData.downPaymentPct);
-  // const [interestRate, setInterestRate] = useState(propertyData.interestRate);
-  // const [startAsset, setStartAsset] = useState(propertyData.startAsset);
-  // const [closing, setClosing] = useState(propertyData.closing);
-
   const [state, setState] = useState(propertyData);
-  // const setPropertyData = (field) => (value) => {
-  //   console.log("event", e);
-  //   console.log("set property data", e.target.value);
-  // };
-
   const onSaveClick = useCallback(() => {
     saveAndClose(state);
   }, [saveAndClose, state]);
-  const setValue = (value) => {
+  const setValue = useCallback((value) => {
     setState({
       ...state,
       ...value
     });
-  };
+  }, [state]);
   const {
-    name, asking, offer, downPaymentPct, interestRate, startAsset, closing
+    name, maintenance, asking, offer, downPaymentPct, interestRate, startAsset, closing
   } = state;
-  console.log("STATE", state);
   return (
     <>
       <DialogContent dividers>
         <DialogContentText id="alert-dialog-description">
           Fill out information for the property.
         </DialogContentText>
+        {displayAlert && (
+          <Alert severity="error">
+            <AlertTitle>Missing fields</AlertTitle>
+            At least one required field is undefined
+          </Alert>
+        )}
         <Grid container spacing={1}>
           <Grid item lg={12} xs={12} sm={12}>
             <TextField fullWidth label="name" defaultValue={name} onChange={useFormInput(setValue, "name")} />
           </Grid>
-
+          <Grid item lg={12} xs={12} sm={12}>
+            <DollarInput
+              id="dialog-form-maintenance"
+              value={maintenance}
+              onChange={useFormInput(setValue, "maintenance")}
+              label="Maintenance"
+            />
+          </Grid>
           <Grid item xs={12} sm={6}>
             <DollarInput
               id="dialog-form-asking"
@@ -524,29 +509,109 @@ const DialogInner = ({ propertyData, saveAndClose }: {
 
 const InitialDialogState = {
   open: false,
+  displayAlert: false,
   title: "",
+  propertyIndex: -1,
   propertyData: InitPropertyData
-  // saveAndClose: () => {}
 };
 
 const BuyHomeCalcPage = (props: PageProps) => {
   const [state, setState] = React.useState(InitialDialogState);
 
-  const openDialog = ({ propertyData }: {
-    propertyData?: PropertyData;
-    updateData: (updatedPropertyData: PropertyData) => void
-  }) => () => {
-    const title = propertyData ? "Edit Property" : "Add Property";
+  const [globalFinancial, setGlobalFinancial] = useState({
+    closing: 10000,
+    startAsset: 50000,
+    interestRate: 3.25
+  });
+  const [table, setTable] = useState(createTable());
+
+  const updateGlobalFinancial = useCallback(
+    (rowLabel) => (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+      const newValue = Number(e.target.value);
+      if (Number.isNaN(Number(newValue))) return;
+      setGlobalFinancial({
+        ...globalFinancial,
+        [rowLabel]: newValue
+      });
+      const newTable = clone(table);
+      const entryUpdate = { [rowLabel]: newValue };
+      const totalCols = table.name.length;
+      for (let i = 1; i < totalCols; i += 1) {
+        const newColEntry = getUpdatedCol(table, i, entryUpdate);
+        // replace column
+        const keys = Object.keys(table);
+        // eslint-disable-next-line no-restricted-syntax
+        for (const key of keys) {
+          newTable[key][i] = newColEntry[key];
+        }
+      }
+      setTable(newTable);
+    }, [globalFinancial, table]
+  );
+
+  const setTableEntry = useCallback((rowLabel: string, i: number) => (
+    e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => {
+    const newValue = Number(e.target.value);
+    if (Number.isNaN(Number(newValue))) return;
+    const newTable = clone(table);
+    newTable[rowLabel][i] = newValue;
+    const entryUpdate = { [rowLabel]: newValue };
+    const newColEntry = getUpdatedCol(table, i, entryUpdate);
+    // replace column
+    const keys = Object.keys(table);
+    // eslint-disable-next-line no-restricted-syntax
+    for (const key of keys) {
+      newTable[key][i] = newColEntry[key];
+    }
+    newTable[rowLabel][i] = e.target.value;
+    setTable(newTable);
+  }, [table]);
+
+  const openDialog = (i?: number) => {
+    const propertyData = getColFromTable(table, i);
+    const propertyIndex = i || table.name.length;
+    const title = i === undefined ? "Add Property" : "Edit Property";
     setState({
       open: true,
+      displayAlert: false,
       title,
-      propertyData: propertyData || InitPropertyData
+      propertyIndex,
+      propertyData
     });
   };
-  const closeDialog = (updatedData) => {
-    console.log("CLOSE DIALOG", updatedData);
+  const closeDialog = useCallback(() => {
     setState({ ...state, open: false });
-  };
+  }, [state]);
+  const saveAndCloseDialog = useCallback((updateData) => {
+    const fieldValues = Object.values(updateData);
+    if (fieldValues.includes(undefined) || fieldValues.includes("")) {
+      setState({
+        ...state,
+        displayAlert: true
+      });
+      return;
+    }
+    const fields = Object.keys(table);
+    const newTable = clone(table);
+    const { propertyIndex } = state;
+    const newCol = createNewEntry({
+      ...updateData,
+      ...globalFinancial
+    });
+
+    for (const field of fields) {
+      newTable[field][propertyIndex] = newCol[field];
+    }
+    setTable(newTable);
+
+    setState({
+      ...state,
+      open: false,
+      displayAlert: false
+    });
+  }, [globalFinancial, state, table]);
+  const { closing, startAsset, interestRate } = globalFinancial;
   return (
     <Layout>
       <SEO title="Home Purchase Feasibility Calculator" />
@@ -556,9 +621,39 @@ const BuyHomeCalcPage = (props: PageProps) => {
         open={state.open}
         closeDialog={closeDialog}
       >
-        <DialogInner propertyData={state.propertyData} saveAndClose={closeDialog} />
+        <DialogInner
+          propertyData={state.propertyData}
+          displayAlert={state.displayAlert}
+          saveAndClose={saveAndCloseDialog}
+        />
       </DialogContainer>
-      <CalcTable openDialog={openDialog} />
+      <h2>Global Financial Variables</h2>
+      <DollarInput
+        id="global-start-asset"
+        value={startAsset}
+        onChange={updateGlobalFinancial("startAsset")}
+        label="Start Asset"
+      />
+      <DollarInput
+        id="global-closing-cost"
+        value={closing}
+        onChange={updateGlobalFinancial("closing")}
+        label="Closing Cost"
+      />
+      <TextField
+        id="global-interest-rate"
+        label="Interest Rate"
+        value={interestRate}
+        onChange={updateGlobalFinancial("interestRate")}
+        InputProps={{
+          endAdornment: <InputAdornment position="end">%</InputAdornment>,
+          inputProps: {
+            style: { textAlign: "right" }
+          }
+        }}
+      />
+      <h2>Comparisons</h2>
+      <CalcTable table={table} openDialog={openDialog} setTableEntry={setTableEntry} />
       <Link to="/">Go back to the homepage</Link>
     </Layout>
   );
